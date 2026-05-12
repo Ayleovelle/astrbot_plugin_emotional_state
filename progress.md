@@ -2729,3 +2729,23 @@ Suggested commit command shape, if the user wants to commit:
 
 - `git add .gitignore README.md _conf_schema.json docs/branching_strategy.md docs/release_branch_sync_checklist.md docs/remote_testing.md docs/theory.md emotion_engine.py fallibility_engine.py integrated_self.py main.py metadata.yaml moral_repair_engine.py progress.md prompts.py public_api.py scripts/benchmark_plugin_hot_path.py scripts/package_plugin.py scripts/plugin_zip_preflight.js scripts/remote_emotion_benchmark_playwright.js scripts/run_remote_emotion_benchmark_batches.js scripts/remote_state_layer_ab_config.json task_plan.md tests/test_astrbot_lifecycle.py tests/test_command_tools.py tests/test_config_schema_contract.py tests/test_document_math_contract.py tests/test_emotion_engine.py tests/test_fallibility_engine.py tests/test_group_atmosphere_engine.py tests/test_integrated_self.py tests/test_moral_repair_engine.py tests/test_package_plugin.py tests/test_public_api.py tests/test_remote_smoke_contract.py agent_identity.py group_atmosphere_engine.py`
 - Then review `git diff --cached --stat` before `git commit`.
+
+## 2026-05-12 QQ Voice Call Repository Rename
+
+Status: plugin slug rename in progress for the QQ voice-call repository identity.
+
+Decision:
+
+- New repository and plugin slug: `astrbot_plugin_qq_voice_call`.
+- Rationale: follows AstrBot plugin naming style and explicitly describes QQ voice call functionality.
+
+Local changes:
+
+- `metadata.yaml` `name` and `repo` now use `astrbot_plugin_qq_voice_call`.
+- Runtime constants in `main.py`, `public_api.py`, and release/package scripts now use `astrbot_plugin_qq_voice_call`.
+- README, remote testing docs, release checklist, cleanup allowlist, benchmark defaults, package tests, and remote smoke contract tests now use the new slug.
+- Historical planning/progress records before this entry still mention the old slug as past evidence and were not rewritten wholesale.
+
+Validation so far:
+
+- Targeted contract suite `py -3.13 -m unittest tests.test_package_plugin tests.test_public_api tests.test_remote_smoke_contract tests.test_document_math_contract -v`: 141 tests OK in 5.360s.

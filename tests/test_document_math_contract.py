@@ -121,7 +121,7 @@ class DocumentMathContractTests(unittest.TestCase):
         self.assertIn("AstrBot 多维情绪状态插件", readme)
         self.assertIn("AstrBot Star 插件", readme)
         self.assertIn("作为 AstrBot 插件安装，作为情绪状态层运行", readme)
-        self.assertIn("https://github.com/Ayleovelle/astrbot_plugin_emotional_state", readme)
+        self.assertIn("https://github.com/Ayleovelle/astrbot_plugin_qq_voice_call", readme)
         self.assertIn("docs/theory.md", readme)
         self.assertEqual(readme.count("```math"), 0)
         self.assertNotIn("### 默认阅读：核心模型摘要", readme)

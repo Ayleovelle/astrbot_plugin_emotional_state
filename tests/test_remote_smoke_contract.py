@@ -240,7 +240,9 @@ class RemoteSmokeContractTests(unittest.TestCase):
 
     def test_documented_plugin_slug_references_match_metadata(self):
         plugin_name = self._metadata_value("name")
-        allowed_external_references = {"astrbot_plugin_volcengine_asr"}
+        repo_url = self._metadata_value("repo")
+        repo_slugs = set(re.findall(r"astrbot_plugin_[A-Za-z0-9_]+", repo_url))
+        allowed_external_references = {"astrbot_plugin_volcengine_asr"} | repo_slugs
 
         for relative_path in (
             Path("README.md"),
@@ -283,7 +285,7 @@ class RemoteSmokeContractTests(unittest.TestCase):
         self.assertIn("AstrBot 多维情绪状态插件", readme)
         self.assertIn("通过 Star 插件载体部署", readme)
         self.assertIn("作为 AstrBot 插件安装，作为情绪状态层运行", readme)
-        self.assertIn("https://github.com/Ayleovelle/astrbot_plugin_emotional_state", readme)
+        self.assertIn("https://github.com/Ayleovelle/astrbot_plugin_qq_voice_call", readme)
         self.assertIn("docs/theory.md", readme)
         self.assertNotIn("0.0.2-beta-pr-1", readme)
         self.assertNotIn("展开逐轮工程迭代明细", readme)
@@ -457,7 +459,7 @@ class RemoteSmokeContractTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-        self.assertIn('ALLOWED_PLUGIN = "astrbot_plugin_emotional_state"', script)
+        self.assertIn('ALLOWED_PLUGIN = "astrbot_plugin_qq_voice_call"', script)
         self.assertIn("ASTRBOT_REMOTE_CLEAN_CONFIRM", script)
         self.assertIn("ASTRBOT_REMOTE_CLEAN_FORMAL", script)
         self.assertIn("ASTRBOT_REMOTE_CLEAN_FAILED_UPLOAD", script)
@@ -478,7 +480,7 @@ class RemoteSmokeContractTests(unittest.TestCase):
             with self.subTest(document_contains_cleanup_contract=True):
                 self.assertIn("scripts\\remote_cleanup_plugin_playwright.js", document)
                 self.assertIn(
-                    '$env:ASTRBOT_REMOTE_CLEAN_CONFIRM = "astrbot_plugin_emotional_state"',
+                    '$env:ASTRBOT_REMOTE_CLEAN_CONFIRM = "astrbot_plugin_qq_voice_call"',
                     document,
                 )
                 self.assertIn(
@@ -489,7 +491,7 @@ class RemoteSmokeContractTests(unittest.TestCase):
                     '$env:ASTRBOT_REMOTE_CLEAN_FAILED_UPLOAD = "1"',
                     document,
                 )
-                self.assertIn("plugin_upload_astrbot_plugin_emotional_state", document)
+                self.assertIn("plugin_upload_astrbot_plugin_qq_voice_call", document)
                 self.assertIn("delete_config=false", document)
                 self.assertIn("delete_data=false", document)
                 self.assertIn("LivingMemory", document)

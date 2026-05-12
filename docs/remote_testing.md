@@ -1,6 +1,6 @@
 # 远程测试与性能基准文档
 
-本文记录 `astrbot_plugin_emotional_state` 的远程验证方法、当前阶段性实测结果、LivingMemory 兼容检查口径，以及继续跑完完整矩阵时的注意事项。
+本文记录 `astrbot_plugin_qq_voice_call` 的远程验证方法、当前阶段性实测结果、LivingMemory 兼容检查口径，以及继续跑完完整矩阵时的注意事项。
 
 ## 测试边界
 
@@ -71,7 +71,7 @@
 
 远程安装前执行过同名插件清理：
 
-- 只删除 `astrbot_plugin_emotional_state`。
+- 只删除 `astrbot_plugin_qq_voice_call`。
 - `delete_config=false`。
 - `delete_data=false`。
 - 未触碰 LivingMemory 插件。
@@ -79,7 +79,7 @@
 历史远程严格烟测确认：
 
 - AstrBot 版本：`4.24.2`。
-- 目标插件：`astrbot_plugin_emotional_state`。
+- 目标插件：`astrbot_plugin_qq_voice_call`。
 - 历史目标版本：`0.1.0-beta`。
 - 显示名：`多维情绪状态`。
 - 启用状态：`true`。
@@ -113,7 +113,7 @@ if (Test-Path $node) { $env:NODE_PATH = $nodeModules } else { $node = "node" }
 $env:ASTRBOT_REMOTE_URL = "http://your-astrbot-host:15356/"
 $env:ASTRBOT_REMOTE_USERNAME = "your-user"
 $env:ASTRBOT_REMOTE_PASSWORD = "your-password"
-$env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_emotional_state"
+$env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_qq_voice_call"
 $env:ASTRBOT_EXPECT_PLUGIN_VERSION = "0.1.0-exp.1"
 $env:ASTRBOT_EXPECT_PLUGIN_DISPLAY_NAME = "多维情绪状态"
 
@@ -143,7 +143,7 @@ $env:ASTRBOT_BENCHMARK_CONFIRM = "RUN_REMOTE_EMOTION_BENCHMARK"
 $env:ASTRBOT_BENCHMARK_TOKEN_FALLBACK = "0"
 $env:ASTRBOT_BENCHMARK_RESTORE_CONFIG_AT_END = "1"
 $env:ASTRBOT_BENCHMARK_RESTORE_CONFIG_EACH_SAMPLE = "0"
-$env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_emotional_state"
+$env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_qq_voice_call"
 $env:ASTRBOT_EXPECT_PLUGIN_VERSION = "0.1.0-exp.1"
 $env:ASTRBOT_EXPECT_PLUGIN_DISPLAY_NAME = "多维情绪状态"
 $env:ASTRBOT_REMOTE_ARTIFACT_DIR = "output\remote_emotion_benchmark_official"

@@ -24,7 +24,7 @@
 
 ## 当前实验分支快照
 
-截至 2026-05-09，本次状态层实验版先固定在 `experiment/state-layer-0.1.0-exp.1`。它仍是 `astrbot_plugin_emotional_state` 的完整插件分支，不是独立安装形态；目标是把后台评估、状态注入瘦身、群聊氛围和 speaker track 等实验能力放在同一条可验证分支上发布。
+截至 2026-05-09，本次状态层实验版先固定在 `experiment/state-layer-0.1.0-exp.1`。它仍是 `astrbot_plugin_qq_voice_call` 的完整插件分支，不是独立安装形态；目标是把后台评估、状态注入瘦身、群聊氛围和 speaker track 等实验能力放在同一条可验证分支上发布。
 
 建议顺序：
 

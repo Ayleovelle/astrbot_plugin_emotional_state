@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { chromium } = require("playwright");
 
-const ALLOWED_PLUGIN = "astrbot_plugin_emotional_state";
+const ALLOWED_PLUGIN = "astrbot_plugin_qq_voice_call";
 
 function env(name, fallback = "") {
   const value = process.env[name];

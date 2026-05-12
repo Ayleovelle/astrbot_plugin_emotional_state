@@ -76,7 +76,7 @@ class PackagePluginTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         install_tree = readme.split("```text", 1)[1].split("```", 1)[0]
 
-        self.assertIn("astrbot_plugin_emotional_state/", install_tree)
+        self.assertIn("astrbot_plugin_qq_voice_call/", install_tree)
         self.assertIn("__init__.py", install_tree)
         self.assertIn("agent_identity.py", install_tree)
         self.assertIn("group_atmosphere_engine.py", install_tree)

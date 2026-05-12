@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PLUGIN_NAME = "astrbot_plugin_emotional_state"
+PLUGIN_NAME = "astrbot_plugin_qq_voice_call"
 
 INCLUDE_ROOT_FILES = {
     "__init__.py",

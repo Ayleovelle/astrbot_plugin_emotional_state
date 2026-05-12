@@ -251,7 +251,7 @@ except ImportError:
     from agent_identity import ConversationIdentity, conversation_identity_from_event
 
 
-PLUGIN_NAME = "astrbot_plugin_emotional_state"
+PLUGIN_NAME = "astrbot_plugin_qq_voice_call"
 _INTERNAL_LLM_CALL: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "astrbot_emotional_state_internal_llm_call",
     default=False,

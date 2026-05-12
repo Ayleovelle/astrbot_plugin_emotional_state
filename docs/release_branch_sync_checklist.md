@@ -21,21 +21,21 @@ if (Test-Path $node) { $env:NODE_PATH = $nodeModules } else { $node = "node" }
 
 py -3.13 -m unittest discover -s tests -v
 py -3.13 -m py_compile __init__.py agent_identity.py main.py emotion_engine.py group_atmosphere_engine.py humanlike_engine.py lifelike_learning_engine.py personality_drift_engine.py integrated_self.py moral_repair_engine.py fallibility_engine.py psychological_screening.py public_api.py prompts.py scripts\package_plugin.py
-py -3.13 scripts\package_plugin.py --output dist\astrbot_plugin_emotional_state.zip
+py -3.13 scripts\package_plugin.py --output dist\astrbot_plugin_qq_voice_call.zip
 & $node --check scripts\remote_smoke_playwright.js
 & $node --check scripts\remote_cleanup_plugin_playwright.js
 & $node --check scripts\remote_install_upload_playwright.js
 & $node --check scripts\remote_emotion_benchmark_playwright.js
 & $node --check scripts\run_remote_emotion_benchmark_batches.js
 & $node --check scripts\plugin_zip_preflight.js
-& $node scripts\plugin_zip_preflight.js dist\astrbot_plugin_emotional_state.zip astrbot_plugin_emotional_state
+& $node scripts\plugin_zip_preflight.js dist\astrbot_plugin_qq_voice_call.zip astrbot_plugin_qq_voice_call
 git diff --check
 ```
 
 4. Run remote read-only smoke when remote validation is available:
 
 ```powershell
-$env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_emotional_state"
+$env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_qq_voice_call"
 $env:ASTRBOT_EXPECT_PLUGIN_VERSION = "0.1.0-exp.1"
 $env:ASTRBOT_EXPECT_PLUGIN_DISPLAY_NAME = "多维情绪状态"
 & $node scripts\remote_smoke_playwright.js
@@ -100,11 +100,11 @@ Use `scripts\remote_smoke_playwright.js` for ordinary repeated validation.
 Only run `scripts\remote_cleanup_plugin_playwright.js` immediately before a destructive reinstall test, and only with:
 
 ```powershell
-$env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_emotional_state"
-$env:ASTRBOT_REMOTE_CLEAN_CONFIRM = "astrbot_plugin_emotional_state"
+$env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_qq_voice_call"
+$env:ASTRBOT_REMOTE_CLEAN_CONFIRM = "astrbot_plugin_qq_voice_call"
 $env:ASTRBOT_REMOTE_CLEAN_FORMAL = "1"
 $env:ASTRBOT_REMOTE_CLEAN_FAILED_UPLOAD = "1"
 & $node scripts\remote_cleanup_plugin_playwright.js
 ```
 
-The cleanup script is allowlisted to `astrbot_plugin_emotional_state`. It may delete only the exact formal plugin record and the exact failed-upload directory `plugin_upload_astrbot_plugin_emotional_state`, always with `delete_config=false` and `delete_data=false`. It must not delete LivingMemory or unrelated plugins.
+The cleanup script is allowlisted to `astrbot_plugin_qq_voice_call`. It may delete only the exact formal plugin record and the exact failed-upload directory `plugin_upload_astrbot_plugin_qq_voice_call`, always with `delete_config=false` and `delete_data=false`. It must not delete LivingMemory or unrelated plugins.
