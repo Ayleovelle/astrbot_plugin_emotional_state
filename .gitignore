@@ -1,4 +1,5 @@
 output/
+.codepilot-uploads/
 dist/
 __pycache__/
 *.py[cod]

@@ -1,5 +1,6 @@
 import unittest
 import ast
+import json
 import re
 from pathlib import Path
 
@@ -66,6 +67,7 @@ class RemoteSmokeContractTests(unittest.TestCase):
         self.assertIn("containsExpectedPlugin=true", readme)
         self.assertIn("expectedPluginRuntime.activated !== false", readme)
         self.assertIn("远程安装插件后", readme)
+        self.assertIn("作为 AstrBot 插件安装，作为情绪状态层运行", readme)
         self.assertIn("scripts\\package_plugin.py", readme)
         self.assertIn("raw/", readme)
         self.assertIn("task_plan.md", readme)
@@ -118,6 +120,14 @@ class RemoteSmokeContractTests(unittest.TestCase):
         )
         self.assertIn(
             "& $node --check scripts\\remote_install_upload_playwright.js",
+            checklist,
+        )
+        self.assertIn(
+            "& $node --check scripts\\remote_emotion_benchmark_playwright.js",
+            checklist,
+        )
+        self.assertIn(
+            "& $node --check scripts\\run_remote_emotion_benchmark_batches.js",
             checklist,
         )
         self.assertIn("& $node --check scripts\\plugin_zip_preflight.js", checklist)
@@ -208,8 +218,10 @@ class RemoteSmokeContractTests(unittest.TestCase):
 
         for runtime_file in (
             "__init__.py",
+            "agent_identity.py",
             "main.py",
             "emotion_engine.py",
+            "group_atmosphere_engine.py",
             "humanlike_engine.py",
             "lifelike_learning_engine.py",
             "personality_drift_engine.py",
@@ -265,34 +277,44 @@ class RemoteSmokeContractTests(unittest.TestCase):
         )
         self.assertIn(f'astrbot_version: "{astrbot_version}"', readme)
 
-    def test_readme_records_beta_pr_iterations_in_order(self):
+    def test_readme_is_concise_release_page_not_iteration_archive(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        section = readme.split("### 0.1.0-beta 迭代记录", 1)[1].split(
-            "## 项目定位",
-            1,
-        )[0]
-        summary = section.split(
-            "<summary>历史预发布批次摘要（0.0.2-beta-pr-1 至 0.0.2-beta-pr-19）</summary>",
-            1,
-        )[1].split("</details>", 1)[0]
-        details = section.split(
-            "<summary>展开逐轮工程迭代明细（第 11-200 次）</summary>",
-            1,
-        )[1].split("</details>", 1)[0]
-        expected = [f"0.0.2-beta-pr-{index}" for index in range(1, 20)]
 
-        found = re.findall(r"`(0\.0\.2-beta-pr-\d+)`", summary)
-        self.assertEqual(expected, found)
-        for version in expected:
-            with self.subTest(version=version):
-                self.assertIn(f"| `{version}` | 已完成 |", summary)
-        self.assertIn(
-            "对外安装版本由 `metadata.yaml` 和 `main.py @register(...)` 共同声明为 `0.1.0-beta`",
-            section,
+        self.assertIn("AstrBot 多维情绪状态插件", readme)
+        self.assertIn("通过 Star 插件载体部署", readme)
+        self.assertIn("作为 AstrBot 插件安装，作为情绪状态层运行", readme)
+        self.assertIn("https://github.com/Ayleovelle/astrbot_plugin_emotional_state", readme)
+        self.assertIn("docs/theory.md", readme)
+        self.assertNotIn("0.0.2-beta-pr-1", readme)
+        self.assertNotIn("展开逐轮工程迭代明细", readme)
+        self.assertNotIn("顶刊证据映射", readme)
+
+    def test_experimental_release_docs_keep_version_and_branch_scope(self):
+        version = self._metadata_value("version")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        remote_testing = (ROOT / "docs" / "remote_testing.md").read_text(
+            encoding="utf-8",
         )
-        for index in range(11, 201):
-            with self.subTest(iteration=index):
-                self.assertRegex(details, rf"\| {index} \| 已完成 \| .+ \| .+ \|")
+        branching = (ROOT / "docs" / "branching_strategy.md").read_text(
+            encoding="utf-8",
+        )
+        checklist = (
+            ROOT / "docs" / "release_branch_sync_checklist.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(version, "0.1.0-exp.1")
+        self.assertIn("experiment/state-layer-0.1.0-exp.1", branching)
+        self.assertIn("experiment/state-layer-0.1.0-exp.1", checklist)
+        self.assertIn("历史基线实测结论", remote_testing)
+        self.assertIn("不是独立安装形态", branching)
+        self.assertIn("$env:ASTRBOT_EXPECT_PLUGIN_VERSION = \"0.1.0-exp.1\"", remote_testing)
+        self.assertIn("$env:ASTRBOT_EXPECT_PLUGIN_DISPLAY_NAME = \"多维情绪状态\"", remote_testing)
+        self.assertIn("当前实验发布目标版本是 `0.1.0-exp.1`", remote_testing)
+        self.assertNotIn("先在 `main` 上完成当前迭代验证", branching)
+        self.assertNotIn("After `main` is clean:", checklist)
+        self.assertNotIn("不是独立" + "产品", branching)
+        self.assertNotIn("AstrBot Emotional " + "Agent", readme)
+        self.assertNotIn("作为 Star 安装，作为 " + "Agent 运行", readme)
 
     def test_remote_smoke_script_uses_environment_credentials(self):
         script = (ROOT / "scripts" / "remote_smoke_playwright.js").read_text(
@@ -515,11 +537,58 @@ class RemoteSmokeContractTests(unittest.TestCase):
         script = (
             ROOT / "scripts" / "remote_emotion_benchmark_playwright.js"
         ).read_text(encoding="utf-8")
+        remote_testing = (ROOT / "docs" / "remote_testing.md").read_text(
+            encoding="utf-8",
+        )
 
+        self.assertIn("benchmark_enable_simulated_time: false", script)
         self.assertIn("benchmark_enable_simulated_time: true", script)
+        self.assertIn("benchmark_time_offset_seconds: 0", script)
         self.assertIn("benchmark_time_offset_seconds", script)
         self.assertIn("Math.max(0, Number(durationSeconds) || 0)", script)
         self.assertIn("lifecycle_duration_seconds", script)
+        self.assertIn("ASTRBOT_BENCHMARK_RESTORE_CONFIG_AT_END", script)
+        self.assertIn("ASTRBOT_BENCHMARK_RESTORE_CONFIG_EACH_SAMPLE", script)
+        self.assertIn("final_restore: finalRestore", script)
+        self.assertIn("restore_jsonl", script)
+        self.assertIn("summarizeRestoreResult", script)
+        self.assertIn("plugin_runtime_probe", script)
+        self.assertIn("ASTRBOT_EXPECT_PLUGIN_VERSION", script)
+        self.assertIn("ASTRBOT_EXPECT_PLUGIN_DISPLAY_NAME", script)
+        self.assertIn("redactRemoteTarget(remoteUrl)", script)
+        self.assertNotIn("remote_url: remoteUrl", script)
+        self.assertIn("ASTRBOT_BENCHMARK_RESTORE_CONFIG_AT_END", remote_testing)
+        self.assertIn("ASTRBOT_BENCHMARK_RESTORE_CONFIG_EACH_SAMPLE", remote_testing)
+        self.assertIn("plugin_runtime_probe", remote_testing)
+        self.assertIn("final_restore.ok", remote_testing)
+        self.assertIn("restore.jsonl", remote_testing)
+        self.assertIn("remote_target.host_hash", remote_testing)
+        self.assertIn("scripts\\remote_state_layer_ab_config.json", remote_testing)
+        self.assertIn("legacy_sync_full_injection", remote_testing)
+        self.assertIn("experimental_state_layer_diff", remote_testing)
+
+    def test_remote_state_layer_ab_config_documents_experiment_matrix(self):
+        config_text = (
+            ROOT / "scripts" / "remote_state_layer_ab_config.json"
+        ).read_text(encoding="utf-8")
+        config = json.loads(config_text)
+        schema = json.loads((ROOT / "_conf_schema.json").read_text(encoding="utf-8"))
+        schema_keys = set(schema)
+        for item in config["matrix"]:
+            extra_keys = set(item["config"]) - schema_keys
+            self.assertEqual(set(), extra_keys, item["id"])
+
+        self.assertIn("legacy_sync_full_injection", config_text)
+        self.assertIn("experimental_state_layer_diff", config_text)
+        self.assertIn('"background_post_assessment": false', config_text)
+        self.assertIn('"background_post_assessment": true', config_text)
+        self.assertIn('"background_post_max_workers": 5', config_text)
+        self.assertIn('"state_injection_compact_mode": "diff"', config_text)
+        self.assertIn('"enable_group_atmosphere_state": true', config_text)
+        self.assertIn('"group_atmosphere_injection_strength": 0.25', config_text)
+        self.assertIn('"group_atmosphere_injection_diff_threshold": 0.08', config_text)
+        self.assertIn('"benchmark_enable_simulated_time": false', config_text)
+        self.assertIn('"benchmark_time_offset_seconds": 0', config_text)
 
     def test_remote_smoke_script_is_read_only(self):
         script = (ROOT / "scripts" / "remote_smoke_playwright.js").read_text(
@@ -560,7 +629,10 @@ class RemoteSmokeContractTests(unittest.TestCase):
                 "EmotionServiceProtocol",
                 "HumanlikeStateServiceProtocol",
                 "MoralRepairStateServiceProtocol",
+                "LifelikeLearningServiceProtocol",
+                "PersonalityDriftServiceProtocol",
                 "FallibilityServiceProtocol",
+                "GroupAtmosphereServiceProtocol",
             }:
                 continue
             for item in node.body:
@@ -575,6 +647,7 @@ class RemoteSmokeContractTests(unittest.TestCase):
         self.assertIn("get_humanlike_service", readme)
         self.assertIn("get_moral_repair_service", readme)
         self.assertIn("get_fallibility_service", readme)
+        self.assertIn("get_group_atmosphere_service", readme)
         self.assertIn("校验核心方法是否完整", readme)
         self.assertIn("校验公开版本/schema 是否匹配", readme)
 

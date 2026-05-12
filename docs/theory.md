@@ -335,7 +335,7 @@ E_t=\Pi_{[-1,1]^n}(E_t)
 ```math
 O_t =
 \begin{bmatrix}
-\mathrm{approach} & \mathrm{withdrawal} & \mathrm{confrontation} &
+\mathrm{approach} & \mathrm{withdrawal} & \mathrm{confrontation} & \mathrm{argument} &
 \mathrm{appeasement} & \mathrm{repair} & \mathrm{reassurance} &
 \mathrm{caution} & \mathrm{rumination} & \mathrm{expressiveness} &
 \mathrm{problem\_solving}
@@ -353,9 +353,9 @@ O_t = 2^{-\Delta t/H_o}O_{t-1}+\mathrm{impulse}(E_t,X_t,\mathrm{appraisal}_t)
 维度对后果的作用：
 
 ```text
-negative valence -> withdrawal / confrontation / repair
+negative valence -> withdrawal / confrontation / argument / repair
 high arousal -> expressiveness and urgency
-high dominance -> confrontation and boundary setting
+high dominance -> confrontation, direct argument, and boundary setting
 low dominance -> appeasement or reassurance
 low goal_congruence -> frustration, complaint, cold distance
 low certainty -> caution and clarification
@@ -369,6 +369,7 @@ low affiliation -> cold distance or rejection
 ```math
 \begin{aligned}
 \mathrm{anger\_push} &= \mathrm{combo}(-V,A,D,\max(-G,C)),\\
+\mathrm{argument} &= \mathrm{anger\_push}\, f_{\mathrm{persona}}(\mathrm{expressiveness},\mathrm{boundary},\mathrm{repair}),\\
 \mathrm{cold\_war} &= \mathrm{combo}(-V,-A,-S,\max(-K,-G)),\\
 \mathrm{anxious\_withdraw} &= \mathrm{combo}(-V,A,-D,-K),\\
 \mathrm{repair} &= \mathrm{combo}(-V,S,\max(K,0.25),1-\mathrm{uncertainty\_penalty}).
@@ -385,10 +386,10 @@ R_t = \mathrm{relationship\_decision}_{\mathrm{llm}}(I_t)
 
 ```math
 R_t.\mathrm{decision}
-\in \{\mathrm{forgive},\mathrm{repair},\mathrm{boundary},\mathrm{cold\_war},\mathrm{escalate},\mathrm{none}\}
+\in \{\mathrm{forgive},\mathrm{repair},\mathrm{boundary},\mathrm{confront},\mathrm{cold\_war},\mathrm{escalate},\mathrm{none}\}
 ```
 
-`forgive` 会清除或缩短冷处理，降低 `withdrawal/confrontation/rumination`，并提高 `repair/approach/problem_solving`；`cold_war` 会延长冷处理并提高回避与反刍；`boundary` 只增强边界表达，不自动触发冷战。这样，生气后的走向由“维度公式 + LLM 关系判断”共同决定，而不是简单地把所有负面情绪都推向冷战。
+`forgive` 会清除或缩短冷处理，降低 `withdrawal/confrontation/argument/rumination`，并提高 `repair/approach/problem_solving`；`confront` 表示把问题说出来，通常对应短促、具体、可修复的对质或争辩；`cold_war` 表示先退开，延长冷处理并提高回避与反刍；`boundary` 只增强边界表达，不自动触发冷战。这样，生气后的走向由“维度公式 + LLM 关系判断 + 人格调制”共同决定，而不是简单地把所有负面情绪都推向冷战。
 
 进一步地，插件让 LLM 输出冲突成因分析：
 
@@ -443,6 +444,10 @@ forgive_t     = forgiveness_readiness_t
 residue_t     = resentment_residue_t
 boundary_t    = boundary_legitimacy_t
 regload_t     = emotion_regulation_load_t
+dialogue_t    = dialogue_viability_t
+argue_t       = confrontation_readiness_t
+silent_t      = cold_war_readiness_t
+unfair_t      = unfair_argument_risk_t
 ```
 
 更新后的剩余委屈近似为：
@@ -469,7 +474,11 @@ regload_t     = emotion_regulation_load_t
 
 因此，用户确实反复犯错、意图明显、信任损伤较高时，边界与谨慎会更强；但如果语义模糊或他/她可能误读，则 confrontation 和 cold_war 会被压低，转向 `careful_checking` 与 `repair`。这来自 appraisal theory 中对责任、意图、可控性和确定性的强调，也与宽恕、道歉完整性、demand-withdraw 和 ostracism 文献相符。`evidence.primary_theory`、`citation_ids` 和 `evidence_strength` 只记录解释依据，不直接提高置信度或放大情绪强度。
 
-冷战或冷处理在插件中被定义为一种可持续衰减的“后果状态”，通常对应降频、短句、保持距离或更强边界感。若配置项 `enable_safety_boundary` 开启，注入 prompt 会额外限制他/她不能表现为羞辱、威胁、操控或拒绝必要帮助；若关闭，则插件只输出情绪后果本身，让上层人格或其他插件自行决定表现边界。若 `repair`、`reassurance` 或 `problem_solving` 同时较高，回复会优先走修复、求证或解决问题。
+争吵/对质和冷战的分流使用三组派生量。`confrontation_readiness` 由合理委屈、边界正当性、意图/可控性和对话可行性提高，并被修复信号、误读概率和歧义压低；`cold_war_readiness` 由残留委屈、信任损伤、调节负荷、反复冒犯和低对话可行性提高，并被修复和宽恕准备度压低；`unfair_argument_risk` 由 `bot_whim_level`、调节负荷、误读概率和歧义提高，用来表示“他/她可能无理取闹或一时上头”。因此，`direct_confrontation` 不是辱骂或攻击，而是高唤醒、高确定、责任较清楚时把边界和责任说出来；`unfair_argument` 则必须同时提升 `careful_checking` 和 `repair`，让下一轮更容易承认误读、降温或修正。
+
+人格模型通过 `derived_factors` 调制该分流：`expressiveness` 与 `boundary_sensitivity` 提高直接对质阈值通过率，`social_distance` 提高冷处理倾向，`repair_orientation` 抑制争吵并提高修复。实验分支还会导出更贴近冲突风格的 `direct_confrontation_bias`、`cold_war_bias`、`unfair_argument_bias` 和 `checking_bias`。这些因子会温和前移到 `confrontation_readiness`、`cold_war_readiness` 与 `unfair_argument_risk`，并进入综合自我 causal trace，便于解释为什么同样的冒犯在直率、外向、边界清晰的人格上更可能短促对质，在回避、低表达或修复倾向强的人格上更可能沉默、核对或先修复。
+
+冷战或冷处理在插件中被定义为一种可持续衰减的“后果状态”，通常对应降频、短句、保持距离或更强边界感。若配置项 `enable_safety_boundary` 开启，注入 prompt 会额外限制他/她不能表现为羞辱、威胁、操控或拒绝必要帮助；若关闭，则插件只输出情绪后果本身，让上层人格或其他插件自行决定表现边界。欺骗、操控、逃责类动作的插件层硬阻断不由 `enable_safety_boundary` 控制，而由 `block_deception_manipulation_evasion_actions` 单独控制；默认只观察和保留风险轨迹。若 `repair`、`reassurance` 或 `problem_solving` 同时较高，回复会优先走修复、求证或解决问题。
 
 ## 9. 稳定性
 

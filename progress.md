@@ -2603,3 +2603,129 @@ Next command shape:
 - Use `remote-emotion-v010-gpt55-lifecycle-simtime` for continued lifecycle simtime batches.
 - Keep `ASTRBOT_BENCHMARK_MODE=lifecycle`, `ASTRBOT_BENCHMARK_CONCURRENCY=2`, and small batch sizes.
 - If a lifecycle run is interrupted, confirm `benchmark_enable_simulated_time=false` and `benchmark_time_offset_seconds=0.0` before returning the server to ordinary use.
+
+## 2026-05-12 Resume Local Verification Checkpoint
+
+Status: local verification checkpoint completed; remote upload/smoke deliberately not run in this resume step.
+
+Reason:
+
+- `task_plan.md` records Iterations 198-200 as local-only/no-upload checkpoint work.
+- Older progress entries still contain remote benchmark continuation command shapes, but this resume step treated remote upload and smoke as opt-in because they mutate or depend on the remote server.
+- Subagent reconnaissance agreed the worktree is large and should be verified before any commit or remote action.
+
+Validation:
+
+- `py -3.13 -m unittest discover -s tests -p 'test*.py' -v`: 366 tests OK in 6.649s.
+- `py -3.13 -m py_compile @pyFiles`: passed for repository Python files enumerated by `rg --files -g '*.py'`.
+- `py -3.13 scripts\package_plugin.py --output dist\astrbot_plugin_emotional_state.zip`: success.
+- `node scripts\plugin_zip_preflight.js dist\astrbot_plugin_emotional_state.zip astrbot_plugin_emotional_state`: `ok=true`, size `210050`, entries `27`.
+- `node --check` over repository JavaScript files enumerated by `rg --files -g '*.js'`: passed.
+- `py -3.13 scripts\benchmark_plugin_hot_path.py`: passed; representative means included `request_default_post_inject=0.092ms`, `response_background_post_assessment=0.028ms`, `memory_slow_emotion_and_snapshot_fanout=30.86ms`.
+
+Notes:
+
+- Plain `py -3.13 -m unittest discover -v` from the repository root found 0 tests and exited non-zero, so the reliable command remains explicit discovery under `tests`.
+- Current branch from `git status --short --branch`: `experiment/state-layer-0.1.0-exp.1`.
+- Worktree remains intentionally dirty with runtime, docs, scripts, tests, and untracked state-layer files; do not claim a clean release state until review/commit staging is done.
+
+Next local-safe step:
+
+- Review the large diff by subsystem and decide whether to stage/commit this experimental state-layer checkpoint before any remote upload, smoke, or benchmark continuation.
+
+## 2026-05-12 One-Pass Local Finish Checkpoint
+
+Status: local finish pass completed; remote upload, remote smoke, and remote benchmark remain blocked by unset remote environment credentials in this shell.
+
+What changed:
+
+- Added `.codepilot-uploads/` to `.gitignore` so local uploaded image artifacts do not appear as accidental commit candidates.
+- Kept the state-layer runtime/docs/tests/scripts changes intact.
+- Rebuilt `dist\astrbot_plugin_emotional_state.zip` from the current working tree.
+
+Validation:
+
+- `git diff --check`: exit 0; only Git LF-to-CRLF warnings were printed.
+- `py -3.13 -m json.tool _conf_schema.json`: passed.
+- `py -3.13 -m json.tool scripts\remote_state_layer_ab_config.json`: passed.
+- `py -3.13 -m unittest discover -s tests -p 'test*.py' -v`: 366 tests OK in 7.500s.
+- `py -3.13 -m py_compile @pyFiles`: passed for files enumerated by `rg --files -g '*.py'`.
+- `py -3.13 scripts\package_plugin.py --output dist\astrbot_plugin_emotional_state.zip`: success.
+- `node scripts\plugin_zip_preflight.js dist\astrbot_plugin_emotional_state.zip astrbot_plugin_emotional_state`: `ok=true`, size `210050`, entries `27`.
+- `node --check` over files enumerated by `rg --files -g '*.js'`: passed.
+- `py -3.13 scripts\benchmark_plugin_hot_path.py`: passed; representative means included `request_default_post_inject=0.085ms`, `response_post_assessment=0.184ms`, `response_background_post_assessment=0.022ms`, and `memory_slow_emotion_and_snapshot_fanout=30.998ms`.
+
+Remote boundary:
+
+- `ASTRBOT_REMOTE_URL`, `ASTRBOT_REMOTE_BASE_URL`, `ASTRBOT_REMOTE_USERNAME`, `ASTRBOT_REMOTE_PASSWORD`, `ASTRBOT_EXPECT_PLUGIN`, `ASTRBOT_BENCHMARK_CONFIRM`, and `ASTRBOT_INSTALL_UPLOAD_CONFIRM` were unset.
+- Because the remote upload/smoke/benchmark scripts require environment credentials and explicit confirmation variables, no remote-mutating or remote-dependent command was run in this checkpoint.
+
+Next if remote completion is required:
+
+- Export the remote URL, username, password, expected plugin, and the required confirmation token for the specific script, then run remote upload/smoke/benchmark from the documented command shapes.
+
+## 2026-05-12 Review-Driven Final Local Finish
+
+Status: code-review blockers resolved locally; final local validation completed; remote actions still not run because the required remote environment variables are unset.
+
+Review fixes:
+
+- `main.py` now accepts the public API protocol's `detail` keyword in `get_group_atmosphere_prompt_fragment(...)`; `detail="diff"` routes through the existing diff injection builder without committing a new prompt snapshot.
+- `tests/test_public_api.py` adds a regression test for calling `get_group_atmosphere_prompt_fragment(session_key=..., detail="diff")`.
+- `scripts/remote_state_layer_ab_config.json` now uses schema-backed keys: `enable_group_atmosphere_state`, `group_atmosphere_injection_strength`, and `group_atmosphere_injection_diff_threshold`; stale experimental keys were removed.
+- `tests/test_remote_smoke_contract.py` now parses the remote state-layer A/B JSON and fails if any matrix config key is missing from `_conf_schema.json`.
+- `README.md` documents the room-mood fallback for adapters that provide stable sender ids but no group id.
+
+Validation:
+
+- `py -3.13 -m unittest tests.test_public_api.MemoryPayloadPublicApiTests.test_group_atmosphere_prompt_fragment_accepts_protocol_detail tests.test_remote_smoke_contract.RemoteSmokeContractTests.test_remote_state_layer_ab_config_documents_experiment_matrix -v`: 2 tests OK.
+- `git diff --check`: exit 0; only Git LF-to-CRLF warnings were printed.
+- `py -3.13 -m json.tool _conf_schema.json`: passed.
+- `py -3.13 -m json.tool scripts\remote_state_layer_ab_config.json`: passed.
+- `py -3.13 -m unittest discover -s tests -p 'test*.py' -v`: 367 tests OK in 7.936s.
+- `py -3.13 -m py_compile @pyFiles`: passed for files enumerated by `rg --files -g '*.py'`.
+- `py -3.13 scripts\package_plugin.py --output dist\astrbot_plugin_emotional_state.zip`: success.
+- `node scripts\plugin_zip_preflight.js dist\astrbot_plugin_emotional_state.zip astrbot_plugin_emotional_state`: `ok=true`, size `210201`, entries `27`.
+- `node --check` over files enumerated by `rg --files -g '*.js'`: passed.
+- `py -3.13 scripts\benchmark_plugin_hot_path.py`: passed; representative means included `request_default_post_inject=0.099ms`, `response_post_assessment=0.210ms`, `response_background_post_assessment=0.019ms`, and `memory_slow_emotion_and_snapshot_fanout=30.986ms`.
+
+Repository status note:
+
+- New runtime/test/config files remain untracked until staged: `agent_identity.py`, `group_atmosphere_engine.py`, `scripts/remote_state_layer_ab_config.json`, and `tests/test_group_atmosphere_engine.py`.
+- These files must be included when committing this experimental state-layer checkpoint; otherwise a clean checkout will not reproduce the passing package/tests.
+
+## 2026-05-12 Commit-Readiness Handoff
+
+Status: commit-readiness review completed; no commit, merge, push, or remote command was run.
+
+Repository shape:
+
+- Branch: `experiment/state-layer-0.1.0-exp.1`.
+- Repository mode: normal repo (`git rev-parse --git-dir` and `git rev-parse --git-common-dir` both returned `.git`).
+- Base against `main`: `389a2461797dfaf485ec676b5fa48b13d5d31d66`.
+
+Must stage with the tracked modifications if committing this checkpoint:
+
+- `agent_identity.py`
+- `group_atmosphere_engine.py`
+- `scripts/remote_state_layer_ab_config.json`
+- `tests/test_group_atmosphere_engine.py`
+
+Ignored artifacts confirmed by `git status --ignored --short`:
+
+- `.codepilot-uploads/`
+- `.pytest_cache/`
+- `__pycache__/`
+- `dist/`
+- `scripts/__pycache__/`
+- `tests/__pycache__/`
+
+Additional checks:
+
+- Old remote A/B key scan found no `enable_group_atmosphere`, `enable_group_atmosphere_injection`, `group_atmosphere_injection_detail`, `group_atmosphere_injection_compact_mode`, or `agent_trail_compaction_detail` references in the checked contract/docs/config files.
+- Schema-key check over `scripts/remote_state_layer_ab_config.json` returned no extra keys for `legacy_sync_full_injection` or `experimental_state_layer_diff`.
+
+Suggested commit command shape, if the user wants to commit:
+
+- `git add .gitignore README.md _conf_schema.json docs/branching_strategy.md docs/release_branch_sync_checklist.md docs/remote_testing.md docs/theory.md emotion_engine.py fallibility_engine.py integrated_self.py main.py metadata.yaml moral_repair_engine.py progress.md prompts.py public_api.py scripts/benchmark_plugin_hot_path.py scripts/package_plugin.py scripts/plugin_zip_preflight.js scripts/remote_emotion_benchmark_playwright.js scripts/run_remote_emotion_benchmark_batches.js scripts/remote_state_layer_ab_config.json task_plan.md tests/test_astrbot_lifecycle.py tests/test_command_tools.py tests/test_config_schema_contract.py tests/test_document_math_contract.py tests/test_emotion_engine.py tests/test_fallibility_engine.py tests/test_group_atmosphere_engine.py tests/test_integrated_self.py tests/test_moral_repair_engine.py tests/test_package_plugin.py tests/test_public_api.py tests/test_remote_smoke_contract.py agent_identity.py group_atmosphere_engine.py`
+- Then review `git diff --cached --stat` before `git commit`.

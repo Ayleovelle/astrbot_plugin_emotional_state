@@ -4,7 +4,7 @@ This checklist protects the current plugin baseline from being split across dirt
 
 ## Before Committing
 
-1. Confirm the working branch is `main`.
+1. Confirm the working branch is `experiment/state-layer-0.1.0-exp.1` for the experimental release. Formal baseline releases should still be validated on `main`.
 2. Confirm generated artifacts are ignored:
    - `dist/`,
    - `output/`,
@@ -20,11 +20,13 @@ $nodeModules = "$HOME\.cache\codex-runtimes\codex-primary-runtime\dependencies\n
 if (Test-Path $node) { $env:NODE_PATH = $nodeModules } else { $node = "node" }
 
 py -3.13 -m unittest discover -s tests -v
-py -3.13 -m py_compile main.py emotion_engine.py humanlike_engine.py lifelike_learning_engine.py personality_drift_engine.py integrated_self.py moral_repair_engine.py fallibility_engine.py psychological_screening.py public_api.py prompts.py scripts\package_plugin.py
+py -3.13 -m py_compile __init__.py agent_identity.py main.py emotion_engine.py group_atmosphere_engine.py humanlike_engine.py lifelike_learning_engine.py personality_drift_engine.py integrated_self.py moral_repair_engine.py fallibility_engine.py psychological_screening.py public_api.py prompts.py scripts\package_plugin.py
 py -3.13 scripts\package_plugin.py --output dist\astrbot_plugin_emotional_state.zip
 & $node --check scripts\remote_smoke_playwright.js
 & $node --check scripts\remote_cleanup_plugin_playwright.js
 & $node --check scripts\remote_install_upload_playwright.js
+& $node --check scripts\remote_emotion_benchmark_playwright.js
+& $node --check scripts\run_remote_emotion_benchmark_batches.js
 & $node --check scripts\plugin_zip_preflight.js
 & $node scripts\plugin_zip_preflight.js dist\astrbot_plugin_emotional_state.zip astrbot_plugin_emotional_state
 git diff --check
@@ -34,7 +36,7 @@ git diff --check
 
 ```powershell
 $env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_emotional_state"
-$env:ASTRBOT_EXPECT_PLUGIN_VERSION = "0.1.0-beta"
+$env:ASTRBOT_EXPECT_PLUGIN_VERSION = "0.1.0-exp.1"
 $env:ASTRBOT_EXPECT_PLUGIN_DISPLAY_NAME = "多维情绪状态"
 & $node scripts\remote_smoke_playwright.js
 ```
@@ -45,7 +47,7 @@ Do not put real credentials or server addresses in committed files.
 
 ## Commit Order
 
-Commit the full validated baseline on `main` first. Include:
+For this experimental release, commit the full validated baseline on `experiment/state-layer-0.1.0-exp.1` first. For formal releases, commit the full validated baseline on `main` first. Include:
 
 - core runtime files,
 - tests,
@@ -58,7 +60,9 @@ Do not commit generated `dist/` or `output/` artifacts.
 
 ## Branch Sync Order
 
-After `main` is clean:
+For this experimental release, keep `experiment/state-layer-0.1.0-exp.1` as the validated publication branch. Do not merge it back to `main` until the experiment has passed local tests, package preflight, and remote smoke.
+
+For formal releases, after `main` is clean:
 
 1. Move or merge `codex/complete-emotional-bot-plugin` to the new `main` baseline.
 2. Sync maintenance branches from the clean baseline:
@@ -79,7 +83,7 @@ After `main` is clean:
 Only run `scripts\remote_install_upload_playwright.js` after:
 
 - the package preflight passes,
-- the preflight confirms the zip contains the runtime root files `__init__.py`, `main.py`, `emotion_engine.py`, `humanlike_engine.py`, `lifelike_learning_engine.py`, `personality_drift_engine.py`, `integrated_self.py`, `moral_repair_engine.py`, `fallibility_engine.py`, `psychological_screening.py`, `prompts.py`, and `public_api.py`,
+- the preflight confirms the zip contains the runtime root files `__init__.py`, `agent_identity.py`, `main.py`, `emotion_engine.py`, `group_atmosphere_engine.py`, `humanlike_engine.py`, `lifelike_learning_engine.py`, `personality_drift_engine.py`, `integrated_self.py`, `moral_repair_engine.py`, `fallibility_engine.py`, `psychological_screening.py`, `prompts.py`, and `public_api.py`,
 - the preflight confirms the zip contains the dependency declaration `requirements.txt`,
 - the preflight confirms the zip contains `LICENSE` and `metadata.yaml` declares `license: GPL-3.0-or-later`,
 - the preflight confirms zip `metadata.yaml` `name:` matches `ASTRBOT_EXPECT_PLUGIN`,

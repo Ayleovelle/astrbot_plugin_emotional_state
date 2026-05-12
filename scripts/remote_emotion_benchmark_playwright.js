@@ -113,6 +113,49 @@ function hashValue(value) {
   return crypto.createHash("sha256").update(stableJson(value)).digest("hex");
 }
 
+function hashText(value) {
+  return crypto.createHash("sha256").update(String(value || "")).digest("hex");
+}
+
+function redactRemoteTarget(remoteUrl) {
+  try {
+    const parsed = new URL(remoteUrl);
+    const isLocal = ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+    return {
+      scheme: parsed.protocol.replace(/:$/, ""),
+      host_hash: hashText(parsed.hostname).slice(0, 16),
+      port: parsed.port || "",
+      path: parsed.pathname && parsed.pathname !== "/" ? parsed.pathname : "",
+      local: isLocal,
+    };
+  } catch {
+    return {
+      scheme: "",
+      host_hash: hashText(remoteUrl).slice(0, 16),
+      port: "",
+      path: "",
+      local: false,
+    };
+  }
+}
+
+function redactArtifactUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    return {
+      origin_hash: hashText(parsed.origin).slice(0, 16),
+      path: parsed.pathname,
+      query_keys: [...parsed.searchParams.keys()].sort(),
+    };
+  } catch {
+    return {
+      origin_hash: hashText(rawUrl).slice(0, 16),
+      path: "",
+      query_keys: [],
+    };
+  }
+}
+
 function safePreview(value, maxLength = 1000) {
   if (value == null) {
     return "";
@@ -217,6 +260,8 @@ function defaultFeatureMatrix() {
     assessment_timing: "post",
     inject_state: false,
     enable_safety_boundary: true,
+    benchmark_enable_simulated_time: false,
+    benchmark_time_offset_seconds: 0,
     persona_modeling: true,
     reset_on_persona_change: true,
     ...offOptionalModules(),
@@ -524,6 +569,76 @@ function normalizeConfigPayload(payload) {
 
 function mergeConfig(baseConfig, patch) {
   return { ...baseConfig, ...(patch || {}) };
+}
+
+function extractPlugins(payload) {
+  const json = payload && payload.json;
+  const raw = json && (json.data || json.plugins || json);
+  return Array.isArray(raw)
+    ? raw
+    : raw && Array.isArray(raw.plugins)
+      ? raw.plugins
+      : [];
+}
+
+function pluginName(plugin) {
+  return plugin && (
+    plugin.name
+    || plugin.plugin_name
+    || plugin.repo
+    || (plugin.metadata && plugin.metadata.name)
+    || plugin.id
+    || ""
+  );
+}
+
+function findPluginByName(payload, expectedPlugin) {
+  if (!expectedPlugin) {
+    return null;
+  }
+  return extractPlugins(payload).find((plugin) => (
+    pluginName(plugin) === expectedPlugin
+    || plugin.dir_name === expectedPlugin
+    || plugin.folder_name === expectedPlugin
+  )) || null;
+}
+
+function summarizePluginRuntime(plugin) {
+  if (!plugin) {
+    return null;
+  }
+  const metadata = plugin.metadata && typeof plugin.metadata === "object"
+    ? plugin.metadata
+    : {};
+  const booleanOrNull = (value) => (
+    typeof value === "boolean" ? value : null
+  );
+  return {
+    name: pluginName(plugin),
+    displayName: plugin.display_name || metadata.display_name || "",
+    version: plugin.version || metadata.version || "",
+    activated: booleanOrNull(plugin.activated),
+    reserved: booleanOrNull(plugin.reserved),
+    author: plugin.author || metadata.author || "",
+    repo: plugin.repo || metadata.repo || "",
+    astrbotVersion: plugin.astrbot_version || metadata.astrbot_version || "",
+    installedAt: plugin.installed_at || "",
+  };
+}
+
+function summarizeRestoreResult(result, requested) {
+  if (!requested) {
+    return { requested: false, ok: null, attempts: [] };
+  }
+  if (!result) {
+    return { requested: true, ok: false, attempts: [], error: "not_attempted" };
+  }
+  return {
+    requested: true,
+    ok: Boolean(result.ok),
+    attempts: Array.isArray(result.attempts) ? result.attempts : [],
+    error: result.error || null,
+  };
 }
 
 async function savePluginConfig(page, config) {
@@ -1122,7 +1237,22 @@ async function runSample(page, item, options) {
       });
     }
     if (restoreConfig) {
-      await savePluginConfig(page, baseConfig).catch(() => {});
+      const restoreResult = await savePluginConfig(page, baseConfig).catch((error) => ({
+        ok: false,
+        attempts: [],
+        error: error.message || String(error),
+      }));
+      appendJsonl(samplesPath.replace(/samples\.jsonl$/, "restore.jsonl"), {
+        run_id: runId,
+        sample_key: key,
+        phase: "each_sample",
+        worker_id: workerId == null ? null : workerId,
+        recorded_at: nowIso(),
+        restore: summarizeRestoreResult(restoreResult, true),
+      });
+      if (configState && restoreResult.ok) {
+        configState.currentHash = hashValue(baseConfig);
+      }
     }
   }
 }
@@ -1305,6 +1435,8 @@ async function main() {
   const password = env("ASTRBOT_REMOTE_PASSWORD");
   const dryRun = env("ASTRBOT_BENCHMARK_DRY_RUN", "1") !== "0";
   const confirm = env("ASTRBOT_BENCHMARK_CONFIRM");
+  const expectedPluginVersion = env("ASTRBOT_EXPECT_PLUGIN_VERSION");
+  const expectedPluginDisplayName = env("ASTRBOT_EXPECT_PLUGIN_DISPLAY_NAME");
   const requestedModel = env("ASTRBOT_BENCHMARK_MODEL", "gpt5.5");
   const mode = env("ASTRBOT_BENCHMARK_MODE", "all");
   const runId = env("ASTRBOT_BENCHMARK_RUN_ID", makeRunId());
@@ -1369,7 +1501,7 @@ async function main() {
   const trackFailedRequests = (workerPage, workerId) => workerPage.on("requestfailed", (request) => {
     failedRequests.push({
       worker_id: workerId,
-      url: request.url(),
+      target: redactArtifactUrl(request.url()),
       failure: request.failure() && request.failure().errorText,
     });
   });
@@ -1382,9 +1514,16 @@ async function main() {
   let providerList = [];
   let provider = null;
   let samples = [];
+  let pluginPayload = null;
+  let expectedPluginRuntime = null;
+  let finalRestoreResult = null;
   const configState = { currentHash: "" };
   try {
     authenticatedUrl = await login(page, remoteUrl, username, password, artifactDir);
+    pluginPayload = await fetchJson(page, "/api/plugin/get");
+    expectedPluginRuntime = summarizePluginRuntime(
+      findPluginByName(pluginPayload, PLUGIN_NAME),
+    );
     pluginConfigPayload = await fetchJson(page, CONFIG_GET_ENDPOINT);
     baseConfig = normalizeConfigPayload(pluginConfigPayload);
     providerList = await getProviderList(page);
@@ -1419,19 +1558,43 @@ async function main() {
     });
   } finally {
     if (restoreConfigAtEnd && Object.keys(baseConfig).length > 0) {
-      await savePluginConfig(page, baseConfig).catch(() => {});
+      finalRestoreResult = await savePluginConfig(page, baseConfig).catch((error) => ({
+        ok: false,
+        attempts: [],
+        error: error.message || String(error),
+      }));
+      if (finalRestoreResult && finalRestoreResult.ok) {
+        configState.currentHash = hashValue(baseConfig);
+      }
     }
     await browser.close();
   }
   const allSamples = readSamples(samplesPath, runHash);
+  const finalRestore = summarizeRestoreResult(finalRestoreResult, restoreConfigAtEnd);
+  const expectedPluginVersionMatches = expectedPluginVersion
+    ? expectedPluginRuntime && expectedPluginRuntime.version === expectedPluginVersion
+    : null;
+  const expectedPluginDisplayNameMatches = expectedPluginDisplayName
+    ? expectedPluginRuntime && expectedPluginRuntime.displayName === expectedPluginDisplayName
+    : null;
+  const pluginProbeOk = Boolean(
+    pluginPayload
+    && pluginPayload.ok
+    && expectedPluginRuntime
+    && expectedPluginRuntime.activated !== false
+    && (expectedPluginVersion ? expectedPluginVersionMatches : true)
+    && (expectedPluginDisplayName ? expectedPluginDisplayNameMatches : true),
+  );
 
   const summary = {
-    ok: allSamples.every((sample) => sample.status !== "error"),
+    ok: allSamples.every((sample) => sample.status !== "error")
+      && (finalRestore.ok !== false)
+      && pluginProbeOk,
     run_id: runId,
     run_hash: runHash,
     started_at: startedAt,
     finished_at: nowIso(),
-    remote_url: remoteUrl,
+    remote_target: redactRemoteTarget(remoteUrl),
     logged_in: authenticatedUrl.includes("#/dashboard/default"),
     dry_run: dryRun,
     mode,
@@ -1440,6 +1603,7 @@ async function main() {
     keep_sessions: keepSessions,
     restore_config_each_sample: restoreConfig,
     restore_config_at_end: restoreConfigAtEnd,
+    final_restore: finalRestore,
     token_fallback_enabled: effectiveTokenFallback,
     token_fallback_requested: tokenFallback,
     max_samples_this_run: maxSamples,
@@ -1458,6 +1622,18 @@ async function main() {
       status: pluginConfigPayload ? pluginConfigPayload.status : 0,
       config_keys: Object.keys(baseConfig).sort(),
     },
+    plugin_runtime_probe: {
+      status: pluginPayload ? pluginPayload.status : 0,
+      ok: pluginProbeOk,
+      expected_plugin: PLUGIN_NAME,
+      expected_version: expectedPluginVersion || null,
+      version_matches: expectedPluginVersion ? Boolean(expectedPluginVersionMatches) : null,
+      expected_display_name: expectedPluginDisplayName || null,
+      display_name_matches: expectedPluginDisplayName
+        ? Boolean(expectedPluginDisplayNameMatches)
+        : null,
+      runtime: expectedPluginRuntime,
+    },
     work_shape: {
       feature_iterations: config.feature_iterations,
       lifecycle_iterations: config.lifecycle_iterations,
@@ -1472,6 +1648,7 @@ async function main() {
       directory: artifactDir,
       samples_jsonl: samplesPath,
       cleanup_jsonl: path.join(artifactDir, "cleanup.jsonl"),
+      restore_jsonl: path.join(artifactDir, "restore.jsonl"),
       summary_json: summaryPath,
       login_screenshot: path.join(artifactDir, "remote-login-page.png"),
       dashboard_screenshot: path.join(artifactDir, "remote-dashboard.png"),

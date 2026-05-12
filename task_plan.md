@@ -216,6 +216,10 @@ Latency target from 2026-05-08 onward: keep iterating with one priority, reducin
 | 198 | complete | Progress persistence update | progress.md records local-only latency batch 7-12 summary and no-upload status |
 | 199 | complete | Local-only policy preserved | Remote smoke/upload deliberately not run because user requested no upload |
 | 200 | complete | Iteration 200 latency checkpoint | Final benchmark/validation checkpoint prepared for full local verification |
+| 201 | complete | Resume-session local verification checkpoint | 366 tests, py_compile, package build, zip preflight, Node syntax checks, and hot-path benchmark passed; no remote upload/smoke run |
+| 202 | complete | One-pass local finish checkpoint | Ignored local upload artifacts, reran full local validation, rebuilt package, and left remote upload/benchmark blocked on missing environment credentials |
+| 203 | complete | Review-driven final local finish | Fixed group-atmosphere public API detail compatibility, corrected remote A/B config keys, documented room-mood fallback semantics, and reran 367-test local validation |
+| 204 | complete | Commit-readiness handoff | Confirmed normal repo branch, base commit, required untracked files, ignored artifacts, and clean remote A/B schema-key scan without committing |
 
 ## Recovery Checklist
 

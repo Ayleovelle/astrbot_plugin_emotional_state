@@ -14,15 +14,25 @@
 
 凭据必须通过环境变量传入。不要把服务器地址、用户名、密码、token 写进仓库文件或测试产物。
 
-## 当前实测结论
+### Remote benchmark A/B contract
 
-截至 `2026-05-08T15:45:33Z`，官方远程性能 run 的阶段性结果如下：
+- `baseline_minimal` 只表示当前已安装插件版本里的功能关闭基线，不等于历史 `0.1.0-beta` 本身。
+- 跨版本 A/B 必须分两组安装、两组 run id：历史 `0.1.0-beta` 一组，实验 `0.1.0-exp.1` 一组。
+- 每组 run 前先用 `scripts\remote_smoke_playwright.js` 校验 `ASTRBOT_EXPECT_PLUGIN_VERSION` 和 `ASTRBOT_EXPECT_PLUGIN_DISPLAY_NAME`。
+- benchmark 运行时也保留这些期望变量；`summary.json` 必须出现 `plugin_runtime_probe.ok=true`、版本匹配和显示名匹配。
+- 不要在历史版和实验版之间复用同一个 `ASTRBOT_BENCHMARK_RUN_ID`。建议使用 `remote-emotion-v010-beta-gpt55-feature` 和 `remote-emotion-v010-exp1-gpt55-feature` 这类可读 run id。
+- `summary.json` 使用 `remote_target.host_hash`，不写 raw `ASTRBOT_REMOTE_URL`。
+- 配置恢复属于通过条件：`ASTRBOT_BENCHMARK_RESTORE_CONFIG_AT_END` 默认是 `1`；小批严格验证可额外设置 `ASTRBOT_BENCHMARK_RESTORE_CONFIG_EACH_SAMPLE=1`。生命周期或模拟时间 run 结束后必须检查 `final_restore.ok=true` 和 `restore.jsonl`。
+
+## 历史基线实测结论
+
+截至 `2026-05-08T15:45:33Z`，官方远程性能 run 的阶段性结果如下。该 run 来自 `0.1.0-beta` 历史基线，用于给实验分支对比；当前实验发布目标版本是 `0.1.0-exp.1`。
 
 | 项目 | 值 |
 | --- | --- |
 | run id | `remote-emotion-v010-gpt55-feature-lifecycle` |
 | AstrBot 远程端口 | `15356` |
-| 插件版本 | `0.1.0-beta` |
+| 历史插件版本 | `0.1.0-beta` |
 | 请求模型 | `gpt5.5` |
 | 实际选中 provider | `1111/gpt-5.5` |
 | 实际模型名 | `gpt-5.5` |
@@ -66,11 +76,11 @@
 - `delete_data=false`。
 - 未触碰 LivingMemory 插件。
 
-远程严格烟测确认：
+历史远程严格烟测确认：
 
 - AstrBot 版本：`4.24.2`。
 - 目标插件：`astrbot_plugin_emotional_state`。
-- 目标版本：`0.1.0-beta`。
+- 历史目标版本：`0.1.0-beta`。
 - 显示名：`多维情绪状态`。
 - 启用状态：`true`。
 - 目标插件未出现在失败插件列表中。
@@ -104,7 +114,8 @@ $env:ASTRBOT_REMOTE_URL = "http://your-astrbot-host:15356/"
 $env:ASTRBOT_REMOTE_USERNAME = "your-user"
 $env:ASTRBOT_REMOTE_PASSWORD = "your-password"
 $env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_emotional_state"
-$env:ASTRBOT_EXPECT_VERSION = "0.1.0-beta"
+$env:ASTRBOT_EXPECT_PLUGIN_VERSION = "0.1.0-exp.1"
+$env:ASTRBOT_EXPECT_PLUGIN_DISPLAY_NAME = "多维情绪状态"
 
 & $node scripts\remote_smoke_playwright.js
 ```
@@ -129,7 +140,12 @@ $env:ASTRBOT_BENCHMARK_MAX_SAMPLES = "50"
 $env:ASTRBOT_BENCHMARK_SLEEP_MS = "1000"
 $env:ASTRBOT_BENCHMARK_DRY_RUN = "0"
 $env:ASTRBOT_BENCHMARK_CONFIRM = "RUN_REMOTE_EMOTION_BENCHMARK"
-$env:ASTRBOT_BENCHMARK_TOKEN_FALLBACK = "1"
+$env:ASTRBOT_BENCHMARK_TOKEN_FALLBACK = "0"
+$env:ASTRBOT_BENCHMARK_RESTORE_CONFIG_AT_END = "1"
+$env:ASTRBOT_BENCHMARK_RESTORE_CONFIG_EACH_SAMPLE = "0"
+$env:ASTRBOT_EXPECT_PLUGIN = "astrbot_plugin_emotional_state"
+$env:ASTRBOT_EXPECT_PLUGIN_VERSION = "0.1.0-exp.1"
+$env:ASTRBOT_EXPECT_PLUGIN_DISPLAY_NAME = "多维情绪状态"
 $env:ASTRBOT_REMOTE_ARTIFACT_DIR = "output\remote_emotion_benchmark_official"
 
 & $node scripts\remote_emotion_benchmark_playwright.js
@@ -143,6 +159,18 @@ $env:ASTRBOT_BENCHMARK_TARGET_COMPLETED = "900"
 & $node scripts\run_remote_emotion_benchmark_batches.js
 ```
 
+实验状态层 A/B 小批验证可以使用专用矩阵文件。该矩阵比较同一安装版本里的 `legacy_sync_full_injection` 与 `experimental_state_layer_diff` 工作流；跨版本结论仍需按上面的 A/B contract 分别安装历史版和实验版。
+
+```powershell
+$env:ASTRBOT_BENCHMARK_CONFIG = "scripts\remote_state_layer_ab_config.json"
+$env:ASTRBOT_BENCHMARK_RUN_ID = "remote-emotion-v010-exp1-state-layer-ab"
+$env:ASTRBOT_BENCHMARK_MODE = "features"
+$env:ASTRBOT_BENCHMARK_MAX_SAMPLES = "40"
+$env:ASTRBOT_BENCHMARK_RESTORE_CONFIG_AT_END = "1"
+$env:ASTRBOT_BENCHMARK_RESTORE_CONFIG_EACH_SAMPLE = "0"
+& $node scripts\remote_emotion_benchmark_playwright.js
+```
+
 ## 数据隔离与续跑规则
 
 性能脚本使用以下规则避免旧数据污染：
@@ -153,6 +181,10 @@ $env:ASTRBOT_BENCHMARK_TARGET_COMPLETED = "900"
 - 只有最新记录为 `ok` 的 `sample_key` 会被视为已完成。
 - 旧失败样本会被续跑重试，不会被永久计入失败。
 - 同一个 `RUN_ID` 和相同 `run_hash` 用于断点续跑；改动矩阵、mode 或模型会生成不同 `run_hash`。
+- `summary.json` 必须包含 `plugin_runtime_probe`，让结果能绑定到实际安装的插件版本。
+- `summary.json` 必须包含 `final_restore.ok`；如果最终恢复远程配置失败，本次 run 视为失败，避免遗留 benchmark 配置。
+- `ASTRBOT_BENCHMARK_RESTORE_CONFIG_EACH_SAMPLE=1` 时，每条样本的恢复尝试会记录到 `restore.jsonl`。
+- `remote_target.host_hash` 用于测试产物脱敏，不再写 raw 远程 URL。
 
 2 并发实现边界：
 

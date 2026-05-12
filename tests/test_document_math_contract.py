@@ -5,7 +5,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MATH_DOCUMENTS = (
-    ROOT / "README.md",
     ROOT / "docs" / "theory.md",
 )
 
@@ -116,27 +115,31 @@ def iter_math_blocks():
 
 
 class DocumentMathContractTests(unittest.TestCase):
-    def test_theory_sections_default_to_summary_with_collapsed_full_version(self):
+    def test_readme_is_release_page_not_theory_archive(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        theory = (ROOT / "docs" / "theory.md").read_text(encoding="utf-8")
 
-        self.assertIn("### 默认阅读：核心模型摘要", readme)
-        self.assertIn("<summary>展开完整公式推导与顶刊依据</summary>", readme)
-        self.assertIn("<summary>展开扩展冲突成因与关系修复公式</summary>", readme)
-        self.assertIn("#### 顶刊证据映射", readme)
-        self.assertIn("10.1177/0956797610372634", readme)
-        self.assertIn("10.1037/a0013965", readme)
-        self.assertIn("astrbot.personality_profile.v1", readme)
-        self.assertIn("仅本地研究资料", readme)
-        self.assertIn("不上传到 GitHub，不进入发布 zip 包", readme)
+        self.assertIn("AstrBot 多维情绪状态插件", readme)
+        self.assertIn("AstrBot Star 插件", readme)
+        self.assertIn("作为 AstrBot 插件安装，作为情绪状态层运行", readme)
+        self.assertIn("https://github.com/Ayleovelle/astrbot_plugin_emotional_state", readme)
+        self.assertIn("docs/theory.md", readme)
+        self.assertEqual(readme.count("```math"), 0)
+        self.assertNotIn("### 默认阅读：核心模型摘要", readme)
+        self.assertNotIn("<summary>展开完整公式推导与顶刊依据</summary>", readme)
+        self.assertNotIn("<summary>展开扩展冲突成因与关系修复公式</summary>", readme)
+        self.assertNotIn("#### 顶刊证据映射", readme)
+        self.assertNotIn("10.1177/0956797610372634", readme)
+        self.assertNotIn("10.1037/a0013965", readme)
+        self.assertNotIn("O_t = 2^{-\\Delta t/H_o}O_{t-1}", readme)
+        self.assertNotIn("Q_t", readme)
+        self.assertNotIn("E_(t-1)", readme)
         self.assertNotIn("personality_literature_kb/curated/top_500.jsonl", readme)
         self.assertNotIn("Raw retrieved records: `21964`", readme)
         self.assertNotIn("Deduplicated works: `19196`", readme)
-        self.assertIn(
-            "<summary>展开行动倾向、关系决策与后果衰减公式</summary>",
-            readme,
-        )
-        self.assertIn("O_t = 2^{-\\Delta t/H_o}O_{t-1}", readme)
+
+    def test_theory_document_keeps_full_model_material(self):
+        theory = (ROOT / "docs" / "theory.md").read_text(encoding="utf-8")
+
         self.assertIn("## 重点版", theory)
         self.assertIn(
             "<summary>展开完整理论论证、公式推导与参考文献</summary>",
@@ -147,9 +150,7 @@ class DocumentMathContractTests(unittest.TestCase):
         self.assertIn("PUBLIC_PERSONALITY_PROFILE_SCHEMA_VERSION", theory)
         self.assertIn("PERS-F001", theory)
         self.assertIn("10.1146/annurev.ps.41.020190.002221", theory)
-        self.assertNotIn("Q_t", readme)
         self.assertNotIn("Q_t", theory)
-        self.assertNotIn("E_(t-1)", readme)
         self.assertNotIn("E_(t-1)", theory)
 
     def test_formula_blocks_use_github_math_fences(self):
@@ -167,7 +168,6 @@ class DocumentMathContractTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertEqual(suspicious_plain_formula_blocks, [])
 
-        self.assertGreaterEqual(counts["README.md"], 20)
         self.assertGreaterEqual(counts["theory.md"], 30)
 
     def test_math_blocks_use_only_github_safe_macro_surface(self):
