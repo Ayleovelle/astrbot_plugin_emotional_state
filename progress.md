@@ -2749,3 +2749,25 @@ Local changes:
 Validation so far:
 
 - Targeted contract suite `py -3.13 -m unittest tests.test_package_plugin tests.test_public_api tests.test_remote_smoke_contract tests.test_document_math_contract -v`: 141 tests OK in 5.360s.
+
+## 2026-05-13 Post-Rename Package Verification
+
+Status: post-rename local package verification completed; no remote server install/smoke was run.
+
+Repository status:
+
+- Current branch: `experiment/state-layer-0.1.0-exp.1`.
+- Local `main` was fast-forwarded to `origin/main` so both point at `ad6bebc`.
+- `origin` remains `https://github.com/Ayleovelle/astrbot_plugin_qq_voice_call.git`.
+- Working tree was clean before package verification.
+
+Validation:
+
+- `py -3.13 scripts\package_plugin.py --output dist\astrbot_plugin_qq_voice_call.zip`: success.
+- `node scripts\plugin_zip_preflight.js dist\astrbot_plugin_qq_voice_call.zip astrbot_plugin_qq_voice_call`: `ok=true`, size `208597`, entries `27`.
+- `py -3.13 -m unittest tests.test_package_plugin tests.test_remote_smoke_contract tests.test_public_api -v`: 135 tests OK in 5.566s.
+
+Next if publishing externally:
+
+- Decide whether the GitHub repository should remain private or be made public before sharing the WebUI install URL.
+- If testing against a real AstrBot server, set remote credentials and use `ASTRBOT_EXPECT_PLUGIN=astrbot_plugin_qq_voice_call`.

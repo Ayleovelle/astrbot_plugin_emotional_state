@@ -221,6 +221,7 @@ Latency target from 2026-05-08 onward: keep iterating with one priority, reducin
 | 203 | complete | Review-driven final local finish | Fixed group-atmosphere public API detail compatibility, corrected remote A/B config keys, documented room-mood fallback semantics, and reran 367-test local validation |
 | 204 | complete | Commit-readiness handoff | Confirmed normal repo branch, base commit, required untracked files, ignored artifacts, and clean remote A/B schema-key scan without committing |
 | 205 | complete | Rename plugin slug for QQ voice call repository | Synchronized plugin slug, package root, repo links, remote scripts, and contract tests to `astrbot_plugin_qq_voice_call` |
+| 206 | complete | Post-rename package verification | Local `main` aligned to `origin/main`; rebuilt `dist/astrbot_plugin_qq_voice_call.zip`; zip preflight and 135 package/remote/public API tests passed |
 
 ## Recovery Checklist
 
