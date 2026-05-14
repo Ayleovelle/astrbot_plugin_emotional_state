@@ -1,2 +1,1 @@
-# No third-party runtime dependencies.
-
+websockets>=12.0

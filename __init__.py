@@ -1,2 +1,1 @@
-"""AstrBot multidimensional emotional state plugin."""
-
+"""AstrBot QQ voice-call plugin package."""

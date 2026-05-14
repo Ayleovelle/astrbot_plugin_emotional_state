@@ -4,68 +4,29 @@ import argparse
 import zipfile
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_NAME = "astrbot_plugin_qq_voice_call"
-
 INCLUDE_ROOT_FILES = {
     "__init__.py",
-    "agent_identity.py",
     "main.py",
-    "emotion_engine.py",
-    "group_atmosphere_engine.py",
-    "humanlike_engine.py",
-    "lifelike_learning_engine.py",
-    "personality_drift_engine.py",
-    "integrated_self.py",
-    "moral_repair_engine.py",
-    "fallibility_engine.py",
-    "psychological_screening.py",
-    "prompts.py",
-    "public_api.py",
+    "call_session.py",
+    "doubao_realtime_client.py",
+    "napcat_call_adapter.py",
+    "summary.py",
+    "sylanne_bridge.py",
     "metadata.yaml",
-    "_conf_schema.json",
     "README.md",
-    "LICENSE",
     "requirements.txt",
+    "_conf_schema.json",
 }
-
-INCLUDE_DIRS = {
-    "docs",
-}
-
-EXCLUDED_FILES = {
-    Path("docs/literature_kb.md"),
-    Path("docs/humanlike_agent_literature_kb.md"),
-}
-
-EXCLUDED_PARTS = {
-    ".git",
-    "__pycache__",
-    ".pytest_cache",
-    "output",
-    "dist",
-    "tests",
-    "scripts",
-    "raw",
-    "literature_kb",
-    "personality_literature_kb",
-    "psychological_literature_kb",
-    "humanlike_agent_literature_kb",
-}
-
-EXCLUDED_SUFFIXES = {
-    ".pyc",
-    ".pyo",
-}
+INCLUDE_DIRS = {"docs"}
+EXCLUDED_PARTS = {".git", "__pycache__", ".pytest_cache", "dist", "output", "tests", "scripts"}
+EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 
 
 def should_include(path: Path) -> bool:
     relative = path.relative_to(ROOT)
-    if relative in EXCLUDED_FILES:
-        return False
-    parts = set(relative.parts)
-    if parts & EXCLUDED_PARTS:
+    if set(relative.parts) & EXCLUDED_PARTS:
         return False
     if path.suffix in EXCLUDED_SUFFIXES:
         return False
@@ -74,43 +35,24 @@ def should_include(path: Path) -> bool:
     return relative.parts[0] in INCLUDE_DIRS
 
 
-def collect_files(exclude_paths: set[Path] | None = None) -> list[Path]:
-    resolved_excludes = {path.resolve() for path in (exclude_paths or set())}
-    files = [
-        path for path in ROOT.rglob("*")
-        if path.is_file()
-        and path.resolve() not in resolved_excludes
-        and should_include(path)
-    ]
-    return sorted(files, key=lambda item: item.relative_to(ROOT).as_posix())
+def collect_files() -> list[Path]:
+    return sorted(path for path in ROOT.rglob("*") if path.is_file() and should_include(path))
 
 
-def build_package(output: Path) -> Path:
+def build_zip(output: Path) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
-    files = collect_files(exclude_paths={output})
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr(f"{PLUGIN_NAME}/", "")
-        for file_path in files:
-            archive.write(
-                file_path,
-                Path(PLUGIN_NAME, file_path.relative_to(ROOT)).as_posix(),
-            )
+        for path in collect_files():
+            archive.write(path, f"{PLUGIN_NAME}/{path.relative_to(ROOT).as_posix()}")
     return output
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Build an AstrBot plugin zip without tests or local artifacts.",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=ROOT / "dist" / f"{PLUGIN_NAME}.zip",
-        help="Output zip path.",
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", default=f"dist/{PLUGIN_NAME}.zip")
     args = parser.parse_args()
-    output = build_package(args.output)
-    print(output)
+    print(build_zip(ROOT / args.output))
 
 
 if __name__ == "__main__":

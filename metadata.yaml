@@ -1,10 +1,11 @@
 name: astrbot_plugin_qq_voice_call
-display_name: 多维情绪状态
-desc: 基于 PAD、OCC、appraisal theory 与情绪动力学，让 AstrBot 维护可计算的多维情绪状态。
-short_desc: 让 AstrBot 拥有可量化、可持续更新的情绪状态。
-version: 0.1.0-exp.1
+display_name: QQ 语音电话助手
+desc: 基于 NapCat 电话桥接层和火山引擎豆包端到端实时语音大模型，让 AstrBot 接听 QQ 语音电话，并在通话结束后把摘要接入 Sylanne 记忆与情绪模块。
+short_desc: 接听 QQ 语音电话，接入豆包实时语音，并沉淀 Sylanne 摘要记忆。
+version: 0.1.0
+repo: "https://github.com/Ayleovelle/astrbot_plugin_qq_voice_call"
 author: pidan
 license: GPL-3.0-or-later
-repo: "https://github.com/Ayleovelle/astrbot_plugin_qq_voice_call"
-support_platforms: []
-astrbot_version: ">=4.9.2,<5.0.0"
+support_platforms:
+  - aiocqhttp
+astrbot_version: ">=4.16,<5"
